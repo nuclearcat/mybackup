@@ -77,23 +77,14 @@ def upload_backup(backup_file_path, url):
 
     return response
 
-if __name__ == "__main__":
-    load_config()
-    if len(sys.argv) != 2:
-        print("Usage: python upload_client.py <backup_file>")
-        sys.exit(1)
 
-    backup_file_path = sys.argv[1]
-    url = f"https://{metadata['hostname']}/api/upload"
-
-    response = upload_backup(backup_file_path, url)
-    # inside response is json with status
-    if response and response.status_code == 200:
+def verify_upload(r):
+    if r.status_code == 200:
         try:
-            j = response.json()
+            j = r.json()
         except:
             print("Failed to parse response json.")
-            print("Response body:", response.text)
+            print("Response body:", r.text)
             sys.exit(1)
         if j['status'] == 'OK':
             print("Backup uploaded successfully.")
@@ -103,6 +94,29 @@ if __name__ == "__main__":
             sys.exit(1)
     else:
         print("Failed to upload the backup. Details:")
-        print("Status code:", response.status_code)
-        print("Response body:", response.text)
+        print("Status code:", r.status_code)
+        print("Response body:", r.text)
         sys.exit(1)
+
+
+
+if __name__ == "__main__":
+    load_config()
+    if len(sys.argv) != 2:
+        print("Usage: python upload_client.py <backup_file or directory>")
+        sys.exit(1)
+
+    backup_file_path = sys.argv[1]
+    url = f"https://{metadata['hostname']}/api/upload"
+
+    # if it dir or file?
+    if os.path.isdir(backup_file_path):
+        # iterate over files in dir
+        for filename in os.listdir(backup_file_path):
+            # upload each file
+            response = upload_backup(backup_file_path+'/'+filename, url)
+            verify_upload(response)
+    else:
+        # upload single file
+        response = upload_backup(backup_file_path, url)
+        verify_upload(response)
